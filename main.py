@@ -27,6 +27,11 @@ def start_command(message):
            "Связаться с разработчиком", url='telegram.me/shorins'
        )
    )
+   keyboard.add(
+       telebot.types.InlineKeyboardButton(
+           "Открыть исходный код бота", url='https://github.com/sdshorin/telegram_matrix_calculator'
+       )
+   )
    bot.send_message(
        message.chat.id,
 	   """
