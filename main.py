@@ -85,8 +85,11 @@ def start_command(message):
 	user_data[message.from_user.id]["vars"] = {}
 	bot.send_message(message.from_user.id, "Все сохраненные матрицы удалены")
 		
-
-	
+@bot.message_handler(commands=['vars'])
+def start_command(message):
+	global user_data
+	for name, matrix in user_data[message.from_user.id]["vars"].items():
+		send_matrix(message, matrix, name)
 
 
 @bot.message_handler(content_types=["text"])
