@@ -1,3 +1,5 @@
+#!/usr/bin/env python3
+
 import telebot
 from  telebot import types 
 from matrix import Matrix, MatrixError
@@ -99,7 +101,7 @@ def get_text_message(message):
 			matrix = eval_matrix_expression(message, message.text)
 			send_matrix(message, matrix)
 		else:
-			pass
+			bot.send_message(message.from_user.id, "Неизвестная команда! Попробуйте /help")
 	except BotException as e:
 		bot.send_message(message.from_user.id, e.str)
 	except MatrixError as e:
