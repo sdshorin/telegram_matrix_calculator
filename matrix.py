@@ -2,7 +2,7 @@
 from __future__ import annotations
 from sys import stdin
 from typing import List
-
+from decimal import Decimal, getcontext
 
 class Matrix:
 	def __init__(self, arr) -> None:
@@ -40,7 +40,7 @@ class Matrix:
 	def size(self):
 		if not len(self.arr):
 			return (0, 0)
-		return (len(self.arr), len(self.arr[1]))
+		return (len(self.arr), len(self.arr[0]))
 	
 	def __add__(self, other: Matrix):
 		if self.size() != other.size():
@@ -59,6 +59,9 @@ class Matrix:
 			for j in range(len(other.arr[0])):
 				result.arr[i][j] -= other.arr[i][j]
 		return result
+
+	def convert_to_decimal(self):
+		self.arr = [[Decimal(i) for i in line] for line in self.arr]
 
 	@staticmethod
 	def _matrix_mult(mat_1, mat_2):
@@ -116,10 +119,25 @@ class Matrix:
 	def solve(self, free_coeff: List):
 		matrix = self.copy()
 		coeff = Matrix([free_coeff]).transpose()
+		coeff = matrix.solve_with_line(coeff)
+		return coeff.transpose().arr[0]
+	
+	def inverse(self):
+		matrix = self.copy()
+		inversed = Matrix.create_id_matrix(len(matrix.arr))
+		if not len(matrix.arr) or len(matrix.arr) != len(matrix.arr[0]):
+			raise MatrixError(self, Matrix(inversed), "Обратную матрицу можно найти только у квадратной матрицы")
+		inversed = matrix.solve_with_line(inversed)
+		inversed.round(6)
+		return inversed
+
+
+	
+	def solve_with_line(matrix, coeff):
 		for i in range(len(matrix.arr)):
 			lider_line_num = get_lider_line(matrix.arr, i, i)
 			if lider_line_num < 0:
-				raise MatrixError(self, Matrix(free_coeff), "Не найден лидирующий элемент")
+				raise MatrixError(matrix, Matrix(coeff), "Не найден лидирующий элемент")
 			if lider_line_num != i:
 				matrix.element_premutation_2(lider_line_num, i)
 				coeff.element_premutation_2(lider_line_num, i)
@@ -138,10 +156,19 @@ class Matrix:
 					lamb = -matrix.arr[line_num][i]
 					matrix.element_premutation_1(line_num, i, lamb)
 					coeff.element_premutation_1(line_num, i, lamb)
-		return coeff.transpose().arr[0]
-					
+		return coeff
 
-			
+	@staticmethod
+	def print_step(m1: Matrix, m2: Matrix):
+		print("-" * 20)
+		for i in range(m1.size()[0]):
+			print(m1.arr[i], "|", m2.arr[i])
+		print("-" * 20)
+
+	def round(self, prec):
+		self.arr = [[round(i, prec) for i in line] for line in self.arr]
+
+
 	def element_premutation_2(self, line_1, line_2):
 		self.arr[line_1], self.arr[line_2] = self.arr[line_2], self.arr[line_1]
 	def element_premutation_1(self, target_line, source_line, lamb):
@@ -180,5 +207,17 @@ class MatrixError(BaseException):
 		return self.description
 
 
-# exec(stdin.read())
 
+# if __name__ == "__main__":
+# 	import random
+
+# 	a = Matrix([[2, 1 ,0, 0], [3, 2, 0, 0], [1, 1, 3, 4], [2, -1, 2, 3]])
+# 	print(a.inverse() * a)
+
+	# def create_random_matrix(x, y):
+	# 	return Matrix([[random.randrange(-10, 50) for _ in range(x)] for _ in range(y)])
+	
+	# for _ in range(100):
+	# 	size = random.randrange(1, 6)
+	# 	a = create_random_matrix(size, size)
+	# 	print(a.inverse() * a)

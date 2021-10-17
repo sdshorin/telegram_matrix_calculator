@@ -31,19 +31,20 @@ class BotException(BaseException):
 # на команды /start и /help печатаем readme и выдаем ссылку на исходный код бота
 @bot.message_handler(commands=['start', 'help'])
 def start_command(message):
-   keyboard = telebot.types.InlineKeyboardMarkup()
-   keyboard.add(
-       telebot.types.InlineKeyboardButton(
-           "Связаться с разработчиком", url='telegram.me/shorins'
-       )
-   )
-   keyboard.add(
-       telebot.types.InlineKeyboardButton(
-           "Открыть исходный код бота", url='https://github.com/sdshorin/telegram_matrix_calculator'
-       )
-   )
-   with open("README.md") as f:
-	   bot.send_message(
+	log_message(message)
+	keyboard = telebot.types.InlineKeyboardMarkup()
+	keyboard.add(
+		telebot.types.InlineKeyboardButton(
+			"Связаться с разработчиком", url='telegram.me/shorins'
+		)
+	)
+	keyboard.add(
+		telebot.types.InlineKeyboardButton(
+			"Открыть исходный код бота", url='https://github.com/sdshorin/telegram_matrix_calculator'
+		)
+	)
+	with open("README.md") as f:
+		bot.send_message(
 			message.chat.id,
 			f.read() + f"\nБот запущен в {start_signature}",
 			reply_markup=keyboard
@@ -51,7 +52,8 @@ def start_command(message):
 
 # По команде /try создаем несколько случайных матриц заданного размера и содержании
 @bot.message_handler(commands=['try'])
-def start_command(message):
+def try_command(message):
+	log_message(message)
 	def create_random_matrix(x, y):
 		return Matrix([[random.randrange(-10, 50) for _ in range(x)] for _ in range(y)])
 	global user_data
@@ -62,7 +64,8 @@ def start_command(message):
 
 # по команде /clear удаляем все сохраненные матрицы пальзователя
 @bot.message_handler(commands=['clear'])
-def start_command(message):
+def clear_command(message):
+	log_message(message)
 	global user_data
 	user_data[message.from_user.id]["vars"] = {}
 	bot.send_message(message.from_user.id, "Все сохраненные матрицы удалены")
@@ -70,7 +73,8 @@ def start_command(message):
 
 # по команде /vars показываем все сохраненные матрицы пальзователя
 @bot.message_handler(commands=['vars'])
-def start_command(message):
+def vars_command(message):
+	log_message(message)
 	global user_data
 	bot.send_message(message.from_user.id, "Cохраненные матрицы:")
 	for name, matrix in user_data[message.from_user.id]["vars"].items():
@@ -83,6 +87,7 @@ def start_command(message):
 # Иначе если в сообщении есть арифметические знаки - его нужно вычислить
 @bot.message_handler(content_types=["text"])
 def get_text_message(message):
+	log_message(message)
 	try:
 		if message.text.find("=") != -1:
 			add_new_var_for_user(message)
@@ -103,11 +108,15 @@ def get_text_message(message):
 		bot.send_message(message.from_user.id, "Unknown error: " + str(e))
 
 
+def log_message(message):
+	log = f"Get message from {message.from_user.last_name} {message.from_user.first_name}. Content: {message.text}"
+	print(log)
+
 # Отправить пользователю его матрицу с именем var
 def print_var(message, var):
 	global user_data
 	if not var in user_data[message.from_user.id]["vars"]:
-		raise BotException("Переменная не найдена")
+		raise BotException(f"Переменная не найдена.\nБот запущен в {start_signature}")
 	matrix: Matrix = user_data[message.from_user.id]["vars"][var]
 	send_matrix(message, matrix, var)
 
@@ -153,6 +162,7 @@ def add_new_var_for_user(message):
 	else:
 		# матрица создается из выражения
 		new_matrix: Matrix = eval_matrix_expression(message, check_expression(input_data))
+		print("get output: ", type(new_matrix))
 		user_data[message.from_user.id]["vars"][new_var_name] = new_matrix
 		bot.send_message(message.from_user.id,f"Матрица {new_var_name} добавлена")
 		send_matrix(message, new_matrix, new_var_name)
@@ -165,21 +175,31 @@ def check_expression(exp):
 
 
 # Вычисляем матричное выражение через eval
-@func_set_timeout(0.01)
 def eval_matrix_expression(message, expression):
 	global user_data
 	vars = user_data[message.from_user.id]["vars"]
 	expression = expression.replace("^T", ".get_transposd()")
+	expression = expression.replace("^-1", ".inverse()")
 	# return Matrix(eval(check_expression(expression, vars.keys()), {}, vars))
-	try:
 		# В eval запрещены все встроенные функции, из переменных доступны только матрицы
-		return Matrix(eval(expression, {"__builtins__": {}}, vars))
-	except FunctionTimedOut:
-		return
-	except MatrixError as e:
-		raise e
+	output = _eval(expression, vars)
+	if isinstance(output, BaseException):
+		raise output
+	if not isinstance(output, Matrix):
+		print("raise:Результат вычисления должен быть матрицей")
+		raise BotException(f"Результат вычисления должен быть матрицей")
+	return output
+
+
+@func_set_timeout(0.01)
+def _eval(expression, vars):
+	try:
+		output = eval(expression, {"__builtins__": {}}, vars)
 	except BaseException as e:
-		raise BotException(f"Ошибка во время вычислений:{str(e)}")
+		output = e
+	return output
+	
+
 
 # Альтернативное решение - самостоятельно распарсить сложно выражение перед тем, как использовать eval
 # def check_expression(expression: str, valid_vars)-> str:
