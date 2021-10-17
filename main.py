@@ -5,7 +5,7 @@ from  telebot import types
 from matrix import Matrix, MatrixError
 from collections import defaultdict
 from func_timeout import func_set_timeout, FunctionTimedOut
-
+import logging
 import random
 import time
 import datetime
@@ -20,9 +20,9 @@ EXAMPLE_MATRIX = [("A", 2, 2),("B", 2, 3), ("C", 3, 4), ("D", 3, 3), ("F", 4, 4)
 #TODO: USE DATABASE
 # Для каждого пользователя храним его матрицы. {<user_id>: {"vars": {"A" = Matrix, "B" = Matrix}}}
 user_data = defaultdict(lambda: {"vars": {}})
-
+logging.basicConfig(filename='bot.log', level=logging.INFO)
 start_signature = str(datetime.datetime.now().strftime("%m/%d/%Y, %H:%M:%S"))
-
+logging.info(f"Started {start_signature}")
 class BotException(BaseException):
 	def __init__(self, str_d) -> None:
 		self.str = str_d
@@ -99,24 +99,34 @@ def get_text_message(message):
 		else:
 			bot.send_message(message.from_user.id, "Неизвестная команда! Попробуйте /help")
 	except BotException as e:
-		bot.send_message(message.from_user.id, e.str)
+		log_error(message, e)
+		bot.send_message(message.from_user.id, e.str + f"\nБот запущен в {start_signature}")
 	except MatrixError as e:
+		log_error(message, e)
 		bot.send_message(message.from_user.id, "MatrixError: " + str(e))
 	except FunctionTimedOut as e:
+		log_error(message, e)
 		bot.send_message(message.from_user.id, "TimeOut!")
 	except BaseException as e:
+		log_error(message, e)
 		bot.send_message(message.from_user.id, "Unknown error: " + str(e))
 
 
 def log_message(message):
 	log = f"Get message from {message.from_user.last_name} {message.from_user.first_name}. Content: {message.text}"
+	logging.info(log)
+	print(log)
+
+def log_error(message, e):
+	log = f"Get error from request {message.from_user.last_name} {message.from_user.first_name}. Content: {message.text}, Error: {str(e)}"
+	logging.info(log)
 	print(log)
 
 # Отправить пользователю его матрицу с именем var
 def print_var(message, var):
 	global user_data
 	if not var in user_data[message.from_user.id]["vars"]:
-		raise BotException(f"Переменная не найдена.\nБот запущен в {start_signature}")
+		raise BotException(f"Переменная не найдена.")
 	matrix: Matrix = user_data[message.from_user.id]["vars"][var]
 	send_matrix(message, matrix, var)
 
