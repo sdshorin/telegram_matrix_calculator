@@ -89,7 +89,7 @@ def get_text_message(message):
 		elif is_valid_matrix_name(message.text):
 			print_var(message, message.text)
 		elif is_expression(message.text):
-			matrix = eval_matrix_expression(message, message.text)
+			matrix = eval_matrix_expression(message, check_expression(message.text))
 			send_matrix(message, matrix)
 		else:
 			bot.send_message(message.from_user.id, "Неизвестная команда! Попробуйте /help")
@@ -152,10 +152,16 @@ def add_new_var_for_user(message):
 		bot.send_message(message.from_user.id,f"Матрица {new_var_name} добавлена")
 	else:
 		# матрица создается из выражения
-		new_matrix: Matrix = eval_matrix_expression(message, input_data)
+		new_matrix: Matrix = eval_matrix_expression(message, check_expression(input_data))
 		user_data[message.from_user.id]["vars"][new_var_name] = new_matrix
 		bot.send_message(message.from_user.id,f"Матрица {new_var_name} добавлена")
 		send_matrix(message, new_matrix, new_var_name)
+
+
+def check_expression(exp):
+	if "__" in exp or "for" in exp or "in" in exp:
+		raise BotException(f"Недопустимое выражение")
+	return exp
 
 
 # Вычисляем матричное выражение через eval
