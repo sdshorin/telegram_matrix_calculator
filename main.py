@@ -27,6 +27,9 @@ class BotException(BaseException):
 	def __init__(self, str_d) -> None:
 		self.str = str_d
 
+# @bot.callback_query_handler(func=lambda call: True)
+# def callback_worker(call):
+# 	print(call.data)
 
 # на команды /start и /help печатаем readme и выдаем ссылку на исходный код бота
 @bot.message_handler(commands=['start', 'help'])
@@ -35,12 +38,16 @@ def start_command(message):
 	keyboard = telebot.types.InlineKeyboardMarkup()
 	keyboard.add(
 		telebot.types.InlineKeyboardButton(
-			"Связаться с разработчиком", url='telegram.me/shorins'
+			"Связаться с разработчиком",
+			url='telegram.me/shorins',
+			# callback_data="connect"
 		)
 	)
 	keyboard.add(
 		telebot.types.InlineKeyboardButton(
-			"Открыть исходный код бота", url='https://github.com/sdshorin/telegram_matrix_calculator'
+			"Открыть исходный код бота",
+			url='https://github.com/sdshorin/telegram_matrix_calculator',
+			# callback_data="source"
 		)
 	)
 	with open("README.md") as f:
